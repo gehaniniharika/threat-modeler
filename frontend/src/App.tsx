@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import FrameworkSelector from './components/FrameworkSelector'
+import ChatInterface from './components/ChatInterface'
 
 interface Framework {
   id: string
@@ -7,8 +9,13 @@ interface Framework {
   description: string
 }
 
+type AppState = 'selecting-framework' | 'chatting'
+
 function App() {
+  const [state, setState] = useState<AppState>('selecting-framework')
   const [frameworks, setFrameworks] = useState<Framework[]>([])
+  const [selectedFramework, setSelectedFramework] = useState<string>('')
+  const [sessionId, setSessionId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,6 +36,32 @@ function App() {
     fetchFrameworks()
   }, [])
 
+  const handleFrameworkSelect = async (frameworkId: string) => {
+    setSelectedFramework(frameworkId)
+    try {
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ framework: frameworkId })
+      })
+      const data = await response.json()
+      setSessionId(data.id)
+      setState('chatting')
+    } catch (err) {
+      setError('Failed to create session')
+    }
+  }
+
+  const handleBackToFrameworks = () => {
+    setState('selecting-framework')
+    setSessionId(null)
+    setSelectedFramework('')
+  }
+
+  if (loading) {
+    return <div className="app loading"><p>Loading application...</p></div>
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -37,49 +70,22 @@ function App() {
       </header>
 
       <main className="app-main">
-        <section className="intro">
-          <h2>Welcome to ThreatModeler</h2>
-          <p>Analyze your application architecture for security threats using industry-standard frameworks.</p>
-        </section>
+        {error && <div className="error-banner">{error}</div>}
 
-        <section className="frameworks">
-          <h2>Available Frameworks</h2>
-          {loading && <p>Loading frameworks...</p>}
-          {error && <p className="error">Error: {error}</p>}
-          {!loading && !error && (
-            <div className="framework-grid">
-              {frameworks.map((fw) => (
-                <div key={fw.id} className="framework-card">
-                  <h3>{fw.name}</h3>
-                  <p>{fw.description}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        {state === 'selecting-framework' && (
+          <FrameworkSelector
+            frameworks={frameworks}
+            onSelect={handleFrameworkSelect}
+          />
+        )}
 
-        <section className="get-started">
-          <h2>Get Started</h2>
-          <div className="steps">
-            <div className="step">
-              <span className="step-number">1</span>
-              <p>Upload your design documents (PDF, Word docs)</p>
-            </div>
-            <div className="step">
-              <span className="step-number">2</span>
-              <p>Connect your GitHub repository or upload Figma diagrams</p>
-            </div>
-            <div className="step">
-              <span className="step-number">3</span>
-              <p>Select your threat modeling framework</p>
-            </div>
-            <div className="step">
-              <span className="step-number">4</span>
-              <p>Review generated DFD diagrams and threat reports</p>
-            </div>
-          </div>
-          <button className="cta-button">Start Threat Modeling</button>
-        </section>
+        {state === 'chatting' && sessionId && (
+          <ChatInterface
+            sessionId={sessionId}
+            framework={selectedFramework}
+            onBack={handleBackToFrameworks}
+          />
+        )}
       </main>
     </div>
   )

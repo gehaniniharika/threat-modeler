@@ -59,9 +59,9 @@ When ready to generate the report, output a JSON with this structure:
   "recommendations": ["Recommendation 1", "Recommendation 2"]
 }"""
 
-def create_threat_modeling_agent():
+def create_threat_modeling_agent(framework: str = None):
     """Create and return a threat modeling agent."""
-    return ThreatModelingAgent()
+    return ThreatModelingAgent(framework=framework)
 
 class ThreatModelingAgent:
     def __init__(self, framework: str = None):

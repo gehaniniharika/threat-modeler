@@ -67,12 +67,11 @@ export default function ChatInterface({ sessionId }: Props) {
   }, [messages])
 
   const sendInitialGreeting = async () => {
-    const greeting = "Hi! I'm ThreatModeler, your AI threat modeling assistant. Please describe your web application - tell me about its architecture, main components, data flows, authentication methods, and any technologies you're using. I'll help you identify potential threats and vulnerabilities."
-
-    await sendMessage(greeting, true)
+    const greeting = "Please help me with threat modeling. I want to analyze my web application for security threats."
+    await sendMessage(greeting)
   }
 
-  const sendMessage = async (content: string, isSystem: boolean = false) => {
+  const sendMessage = async (content: string) => {
     if (!content.trim()) return
 
     setLoading(true)
@@ -120,7 +119,7 @@ export default function ChatInterface({ sessionId }: Props) {
 
       // Send confirmation message
       const frameworkName = frameworks.find(f => f.id === frameworkId)?.name || frameworkId
-      await sendMessage(`Great! I'll analyze your application using the ${frameworkName} threat modeling framework. Based on what you've shared, let me identify the key threats and vulnerabilities...`, true)
+      await sendMessage(`Great! I'll analyze your application using the ${frameworkName} threat modeling framework. Based on what you've shared, let me identify the key threats and vulnerabilities...`)
     } catch (err) {
       console.error('Failed to set framework:', err)
     }

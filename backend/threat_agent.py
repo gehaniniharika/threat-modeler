@@ -2,15 +2,13 @@ import json
 from anthropic import Anthropic
 import os
 
-client = Anthropic()
-
 SYSTEM_PROMPT = """You are an expert threat modeling specialist with deep knowledge of cybersecurity, application architecture, and risk assessment.
 
 Your role is to help users perform comprehensive threat modeling on their web applications using industry-standard frameworks.
 
 You will:
 1. Ask clarifying questions about the application architecture, data flows, authentication mechanisms, and technologies used
-2. Understand the user's threat modeling framework preference (STRIDE, PASTA, or hybrid)
+2. Understand the user's threat modeling framework preference (STRIDE, PASTA, PHANTOM-B, or hybrid)
 3. Analyze the provided information (code, documentation, diagrams, or descriptions)
 4. Identify potential threats, vulnerabilities, and risks
 5. Provide severity ratings (Critical, High, Medium, Low)
@@ -20,7 +18,7 @@ You will:
 When the user has provided enough information, generate a structured JSON threat report with the following format:
 {
   "application_name": "...",
-  "framework": "STRIDE|PASTA|HYBRID",
+  "framework": "STRIDE|PASTA|PHANTOM-B|HYBRID",
   "summary": "Executive summary of threats identified",
   "threats": [
     {
@@ -63,6 +61,7 @@ class ThreatModelingAgent:
         self.api_key = os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY not set in environment variables")
+        self.client = Anthropic(api_key=self.api_key)
 
     def chat(self, user_message: str) -> str:
         """Send a message and get a response from the threat modeling agent."""
@@ -71,7 +70,7 @@ class ThreatModelingAgent:
             "content": user_message
         })
 
-        response = client.messages.create(
+        response = self.client.messages.create(
             model="claude-opus-5",
             max_tokens=2000,
             system=SYSTEM_PROMPT,

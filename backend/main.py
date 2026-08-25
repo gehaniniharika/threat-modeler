@@ -61,7 +61,8 @@ async def get_frameworks():
         "frameworks": [
             {"id": "stride", "name": "STRIDE", "description": "Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege"},
             {"id": "pasta", "name": "PASTA", "description": "Process for Attack Simulation and Threat Analysis"},
-            {"id": "hybrid", "name": "Hybrid", "description": "Combined approach using STRIDE and PASTA frameworks"}
+            {"id": "phantom-b", "name": "PHANTOM-B", "description": "Probabilistic Heuristic Attack and Mitigation Model using Behavioral analysis"},
+            {"id": "hybrid", "name": "Hybrid", "description": "Combined approach using STRIDE, PASTA, and PHANTOM-B frameworks"}
         ]
     }
 

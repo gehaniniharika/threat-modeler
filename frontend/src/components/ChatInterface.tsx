@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import './ChatInterface.css'
+import FrameworkSelector from './FrameworkSelector'
 
 interface Message {
   id: number
@@ -8,35 +9,53 @@ interface Message {
   created_at: string
 }
 
-interface Props {
-  sessionId: number
-  framework: string
-  onBack: () => void
+interface Framework {
+  id: string
+  name: string
+  description: string
 }
 
-export default function ChatInterface({ sessionId, framework, onBack }: Props) {
+interface Props {
+  sessionId: number
+}
+
+export default function ChatInterface({ sessionId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
+  const [frameworks, setFrameworks] = useState<Framework[]>([])
+  const [selectedFramework, setSelectedFramework] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [reportReady, setReportReady] = useState(false)
+  const [showFrameworkSelector, setShowFrameworkSelector] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Load conversation history on mount
+  // Load conversation history and frameworks on mount
   useEffect(() => {
-    const loadMessages = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch(`/api/sessions/${sessionId}/messages`)
-        const data = await response.json()
-        setMessages(data)
+        const [messagesRes, frameworksRes] = await Promise.all([
+          fetch(`/api/sessions/${sessionId}/messages`),
+          fetch('/api/frameworks')
+        ])
+
+        const messagesData = await messagesRes.json()
+        const frameworksData = await frameworksRes.json()
+
+        setMessages(messagesData)
+        setFrameworks(frameworksData.frameworks)
+
+        // If no messages, send initial greeting
+        if (messagesData.length === 0) {
+          sendInitialGreeting()
+        }
+
         scrollToBottom()
       } catch (err) {
-        console.error('Failed to load messages:', err)
+        console.error('Failed to load data:', err)
       }
     }
 
-    loadMessages()
-    // Send initial prompt based on framework
-    sendInitialMessage()
+    loadData()
   }, [sessionId])
 
   const scrollToBottom = () => {
@@ -47,16 +66,13 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
     scrollToBottom()
   }, [messages])
 
-  const sendInitialMessage = async () => {
-    try {
-      const initialPrompt = `I want to perform threat modeling on my web application using the ${framework.toUpperCase()} framework. Let's start with some details about my application architecture.`
-      await sendMessage(initialPrompt)
-    } catch (err) {
-      console.error('Failed to send initial message:', err)
-    }
+  const sendInitialGreeting = async () => {
+    const greeting = "Hi! I'm ThreatModeler, your AI threat modeling assistant. Please describe your web application - tell me about its architecture, main components, data flows, authentication methods, and any technologies you're using. I'll help you identify potential threats and vulnerabilities."
+
+    await sendMessage(greeting, true)
   }
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, isSystem: boolean = false) => {
     if (!content.trim()) return
 
     setLoading(true)
@@ -67,13 +83,18 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
         body: JSON.stringify({ content })
       })
 
-      const data = await response.json()
+      if (!response.ok) throw new Error('Failed to send message')
 
       // Reload messages to get the latest
       const messagesResponse = await fetch(`/api/sessions/${sessionId}/messages`)
       const newMessages = await messagesResponse.json()
       setMessages(newMessages)
       setInputValue('')
+
+      // Show framework selector after 4+ exchanges
+      if (newMessages.length >= 4 && !selectedFramework && !showFrameworkSelector) {
+        setShowFrameworkSelector(true)
+      }
     } catch (err) {
       console.error('Failed to send message:', err)
     } finally {
@@ -86,7 +107,31 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
     sendMessage(inputValue)
   }
 
+  const handleFrameworkSelect = async (frameworkId: string) => {
+    setSelectedFramework(frameworkId)
+    setShowFrameworkSelector(false)
+
+    try {
+      await fetch(`/api/sessions/${sessionId}/framework`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ framework: frameworkId })
+      })
+
+      // Send confirmation message
+      const frameworkName = frameworks.find(f => f.id === frameworkId)?.name || frameworkId
+      await sendMessage(`Great! I'll analyze your application using the ${frameworkName} threat modeling framework. Based on what you've shared, let me identify the key threats and vulnerabilities...`, true)
+    } catch (err) {
+      console.error('Failed to set framework:', err)
+    }
+  }
+
   const handleGenerateReport = async () => {
+    if (!selectedFramework) {
+      alert('Please select a threat modeling framework first')
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch(`/api/sessions/${sessionId}/generate-report`, {
@@ -122,11 +167,10 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
     <div className="chat-interface">
       <div className="chat-header">
         <div className="chat-title">
-          <button className="back-button" onClick={onBack}>← Back</button>
-          <div>
-            <h2>Threat Modeling Chat</h2>
-            <p>Framework: <strong>{framework.toUpperCase()}</strong></p>
-          </div>
+          <h2>Threat Modeling Chat</h2>
+          {selectedFramework && (
+            <p>Framework: <strong>{frameworks.find(f => f.id === selectedFramework)?.name || selectedFramework.toUpperCase()}</strong></p>
+          )}
         </div>
         <div className="chat-actions">
           {reportReady && (
@@ -134,7 +178,7 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
               📄 Download PDF Report
             </button>
           )}
-          {!reportReady && messages.length > 2 && (
+          {selectedFramework && !reportReady && messages.length > 4 && (
             <button className="generate-btn" onClick={handleGenerateReport} disabled={loading}>
               {loading ? 'Generating...' : '✓ Generate Report'}
             </button>
@@ -150,6 +194,16 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
             </div>
           </div>
         ))}
+
+        {showFrameworkSelector && (
+          <div className="framework-selector-overlay">
+            <FrameworkSelector
+              frameworks={frameworks}
+              onSelect={handleFrameworkSelect}
+            />
+          </div>
+        )}
+
         {loading && (
           <div className="message assistant">
             <div className="message-content typing">
@@ -165,11 +219,11 @@ export default function ChatInterface({ sessionId, framework, onBack }: Props) {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Describe your application architecture, data flows, or ask a question..."
-          disabled={loading}
+          placeholder={selectedFramework ? "Ask follow-up questions or provide more details..." : "Describe your application architecture..."}
+          disabled={loading || showFrameworkSelector}
           className="chat-input"
         />
-        <button type="submit" disabled={loading} className="send-button">
+        <button type="submit" disabled={loading || showFrameworkSelector} className="send-button">
           {loading ? '...' : 'Send'}
         </button>
       </form>

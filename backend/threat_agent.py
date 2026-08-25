@@ -1,21 +1,34 @@
 import json
 from anthropic import Anthropic
 import os
+from frameworks import get_framework_prompt
 
-SYSTEM_PROMPT = """You are an expert threat modeling specialist with deep knowledge of cybersecurity, application architecture, and risk assessment.
+INITIAL_SYSTEM_PROMPT = """You are an expert threat modeling specialist with deep knowledge of cybersecurity, application architecture, and risk assessment.
 
-Your role is to help users perform comprehensive threat modeling on their web applications using industry-standard frameworks.
+Your role is to help users perform comprehensive threat modeling on their web applications.
 
-You will:
-1. Ask clarifying questions about the application architecture, data flows, authentication mechanisms, and technologies used
-2. Understand the user's threat modeling framework preference (STRIDE, PASTA, PHANTOM-B, or hybrid)
-3. Analyze the provided information (code, documentation, diagrams, or descriptions)
-4. Identify potential threats, vulnerabilities, and risks
-5. Provide severity ratings (Critical, High, Medium, Low)
-6. Suggest mitigation strategies for each identified threat
-7. Generate a comprehensive, structured threat modeling report
+Start by asking clarifying questions about:
+1. Application type and purpose
+2. Architecture and main components
+3. Data flows and external integrations
+4. Authentication and authorization mechanisms
+5. Technologies and frameworks used
 
-When the user has provided enough information, generate a structured JSON threat report with the following format:
+After gathering enough information, ask the user to choose their preferred threat modeling framework:
+- STRIDE: Focus on threat categories (Spoofing, Tampering, etc.)
+- PASTA: Follow attack simulation process and stages
+- PHANTOM-B: Analyze behavioral anomalies and monitoring
+
+Be conversational and thorough. Gather information naturally through dialogue."""
+
+def get_report_system_prompt(framework: str) -> str:
+    """Get framework-specific system prompt for report generation"""
+    base_prompt = """You are an expert threat modeling specialist. Generate a comprehensive threat report."""
+    framework_prompt = get_framework_prompt(framework)
+
+    return base_prompt + "\n\n" + framework_prompt + """
+
+When ready to generate the report, output a JSON with this structure:
 {
   "application_name": "...",
   "framework": "STRIDE|PASTA|PHANTOM-B|HYBRID",
@@ -25,7 +38,7 @@ When the user has provided enough information, generate a structured JSON threat
       "id": "T001",
       "title": "Threat title",
       "description": "Detailed description",
-      "category": "STRIDE/PASTA category",
+      "category": "Framework-specific category",
       "severity": "Critical|High|Medium|Low",
       "affected_component": "...",
       "attack_vector": "How this threat could be exploited",
@@ -43,21 +56,17 @@ When the user has provided enough information, generate a structured JSON threat
       "risks": ["risk1", "risk2"]
     }
   ],
-  "recommendations": [
-    "High-priority recommendation 1",
-    "High-priority recommendation 2"
-  ]
-}
-
-Ask follow-up questions if needed to understand the application better. Be thorough but conversational."""
+  "recommendations": ["Recommendation 1", "Recommendation 2"]
+}"""
 
 def create_threat_modeling_agent():
     """Create and return a threat modeling agent."""
     return ThreatModelingAgent()
 
 class ThreatModelingAgent:
-    def __init__(self):
+    def __init__(self, framework: str = None):
         self.conversation_history = []
+        self.framework = framework
         self.api_key = os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY not set in environment variables")
@@ -70,10 +79,13 @@ class ThreatModelingAgent:
             "content": user_message
         })
 
+        # Use framework-specific prompt if framework is set, otherwise use initial prompt
+        system_prompt = get_report_system_prompt(self.framework) if self.framework else INITIAL_SYSTEM_PROMPT
+
         response = self.client.messages.create(
             model="claude-opus-5",
             max_tokens=2000,
-            system=SYSTEM_PROMPT,
+            system=system_prompt,
             messages=self.conversation_history
         )
 

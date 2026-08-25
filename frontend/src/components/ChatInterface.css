@@ -233,3 +233,37 @@
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Framework Selector Overlay */
+.framework-selector-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.framework-selector-overlay > div {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.framework-selector-overlay h2 {
+  margin-top: 0;
+}
+
+.framework-selector-overlay .framework-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}

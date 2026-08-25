@@ -30,7 +30,7 @@ class ChatMessage(BaseModel):
     framework: Optional[str] = None
 
 class SessionCreate(BaseModel):
-    framework: str  # STRIDE, PASTA, or HYBRID
+    framework: Optional[str] = None  # Set later by user
 
 class SessionResponse(BaseModel):
     id: int
@@ -89,6 +89,18 @@ async def get_session_messages(session_id: int, db: Session = Depends(get_db)):
     messages = db.query(DBMessage).filter(DBMessage.session_id == session_id).all()
     return [{"id": m.id, "role": m.role, "content": m.content, "created_at": m.created_at} for m in messages]
 
+# Update framework for session
+@app.post("/api/sessions/{session_id}/framework")
+async def update_framework(session_id: int, framework_data: dict, db: Session = Depends(get_db)):
+    session = db.query(DBSession).filter(DBSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    framework = framework_data.get("framework")
+    session.framework = framework
+    db.commit()
+    return {"id": session.id, "framework": session.framework}
+
 # Chat endpoint
 @app.post("/api/sessions/{session_id}/chat")
 async def chat(session_id: int, msg: ChatMessage, db: Session = Depends(get_db)):
@@ -96,8 +108,8 @@ async def chat(session_id: int, msg: ChatMessage, db: Session = Depends(get_db))
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Create agent for this session
-    agent = create_threat_modeling_agent()
+    # Create agent with framework if set
+    agent = create_threat_modeling_agent(framework=session.framework)
 
     # Load conversation history from DB
     messages = db.query(DBMessage).filter(DBMessage.session_id == session_id).all()

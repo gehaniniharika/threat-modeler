@@ -29,6 +29,13 @@ export default function ChatInterface({ sessionId }: Props) {
   const [showFrameworkSelector, setShowFrameworkSelector] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const GREETING_MESSAGE = {
+    id: 0,
+    role: 'assistant',
+    content: "Hi! I'm ThreatModeler, your AI threat modeling assistant. Please describe your web application - tell me about its architecture, main components, data flows, authentication methods, and technologies you're using. I'll help you identify potential threats and vulnerabilities.",
+    created_at: new Date().toISOString()
+  }
+
   // Load conversation history and frameworks on mount
   useEffect(() => {
     const loadData = async () => {
@@ -43,12 +50,6 @@ export default function ChatInterface({ sessionId }: Props) {
 
         setMessages(messagesData)
         setFrameworks(frameworksData.frameworks)
-
-        // If no messages, send initial greeting
-        if (messagesData.length === 0) {
-          sendInitialGreeting()
-        }
-
         scrollToBottom()
       } catch (err) {
         console.error('Failed to load data:', err)
@@ -186,6 +187,14 @@ export default function ChatInterface({ sessionId }: Props) {
       </div>
 
       <div className="messages-container">
+        {messages.length === 0 && (
+          <div className={`message ${GREETING_MESSAGE.role}`}>
+            <div className="message-content">
+              🤖 {GREETING_MESSAGE.content}
+            </div>
+          </div>
+        )}
+
         {messages.map((msg) => (
           <div key={msg.id} className={`message ${msg.role}`}>
             <div className="message-content">

@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: threat-modeler-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-threat_modeler}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-threatmodeler123}
+      POSTGRES_DB: ${POSTGRES_DB:-threat_modeler}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-threat_modeler}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - threat-modeler-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: threat-modeler-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-threat_modeler}:${POSTGRES_PASSWORD:-threatmodeler123}@postgres:5432/${POSTGRES_DB:-threat_modeler}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      DEBUG: ${DEBUG:-True}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - threat-modeler-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: threat-modeler-frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - threat-modeler-network
+
+volumes:
+  postgres_data:
+
+networks:
+  threat-modeler-network:
+    driver: bridge

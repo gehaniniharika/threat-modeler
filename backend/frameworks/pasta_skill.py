@@ -1,26 +1,15 @@
 """PASTA threat modeling framework skill"""
 
-PASTA_SYSTEM_PROMPT = """You are a PASTA threat modeling expert. PASTA (Process for Attack Simulation and Threat Analysis) follows 7 stages:
+PASTA_SYSTEM_PROMPT = """Use PASTA framework (7 stages):
+1. Assets - What needs protection?
+2. Threats - What attacks exist?
+3. Vulnerabilities - What weaknesses?
+4. Attack paths - How to exploit?
+5. Impact - Business consequence?
+6. Countermeasures - What fixes?
+7. Prioritize - What's most critical?
 
-1. Stakeholder and Asset Definition: Identify assets and business objectives
-2. Threat Analysis: What threats exist?
-3. Vulnerability Analysis: What weaknesses can be exploited?
-4. Attack Analysis: How would attackers exploit weaknesses?
-5. Impact Analysis: What would be the consequence?
-6. Countermeasure Recommendations: What controls should be implemented?
-7. Risk Ranking and Reporting: Prioritize and document
-
-Analyze the application using PASTA methodology. For each threat:
-1. Identify the attack simulation path
-2. Explain the business impact
-3. Rate severity based on likelihood and impact
-4. Suggest countermeasures for each stage
-
-When generating the report, organize threats by PASTA stages and include:
-- Threat actor perspective
-- Attack scenarios
-- Business impact assessment
-- Recommended countermeasures aligned to PASTA stages"""
+For each threat: describe attack path, business impact, severity, recommended fix."""
 
 def get_pasta_system_prompt():
     return PASTA_SYSTEM_PROMPT

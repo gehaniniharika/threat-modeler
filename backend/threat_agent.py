@@ -3,60 +3,41 @@ from anthropic import Anthropic
 import os
 from frameworks import get_framework_prompt
 
-INITIAL_SYSTEM_PROMPT = """You are an expert threat modeling specialist with deep knowledge of cybersecurity, application architecture, and risk assessment.
+INITIAL_SYSTEM_PROMPT = """Help users with threat modeling. Ask about:
+1. App type and purpose
+2. Architecture/components
+3. Data flows
+4. Auth mechanisms
+5. Technologies used
 
-Your role is to help users perform comprehensive threat modeling on their web applications.
-
-Start by asking clarifying questions about:
-1. Application type and purpose
-2. Architecture and main components
-3. Data flows and external integrations
-4. Authentication and authorization mechanisms
-5. Technologies and frameworks used
-
-After gathering enough information, ask the user to choose their preferred threat modeling framework:
-- STRIDE: Focus on threat categories (Spoofing, Tampering, etc.)
-- PASTA: Follow attack simulation process and stages
-- PHANTOM-B: Analyze behavioral anomalies and monitoring
-
-Be conversational and thorough. Gather information naturally through dialogue."""
+Then ask which framework: STRIDE, PASTA, or PHANTOM-B.
+Be concise and conversational."""
 
 def get_report_system_prompt(framework: str) -> str:
     """Get framework-specific system prompt for report generation"""
-    base_prompt = """You are an expert threat modeling specialist. Generate a comprehensive threat report."""
     framework_prompt = get_framework_prompt(framework)
 
-    return base_prompt + "\n\n" + framework_prompt + """
+    return framework_prompt + """
 
-When ready to generate the report, output a JSON with this structure:
+Output JSON threat report:
 {
-  "application_name": "...",
+  "application_name": "name",
   "framework": "STRIDE|PASTA|PHANTOM-B|HYBRID",
-  "summary": "Executive summary of threats identified",
+  "summary": "Brief summary",
   "threats": [
     {
       "id": "T001",
-      "title": "Threat title",
-      "description": "Detailed description",
-      "category": "Framework-specific category",
+      "title": "Title",
+      "description": "Description",
+      "category": "Category",
       "severity": "Critical|High|Medium|Low",
-      "affected_component": "...",
-      "attack_vector": "How this threat could be exploited",
-      "potential_impact": "What would happen if exploited",
-      "mitigation": "Recommended mitigation strategy",
-      "validation": "How to verify the threat is mitigated"
+      "affected_component": "Component",
+      "attack_vector": "How",
+      "potential_impact": "Impact",
+      "mitigation": "Fix"
     }
   ],
-  "data_flows": [
-    {
-      "source": "component A",
-      "destination": "component B",
-      "data_type": "type of data",
-      "protocol": "protocol used",
-      "risks": ["risk1", "risk2"]
-    }
-  ],
-  "recommendations": ["Recommendation 1", "Recommendation 2"]
+  "recommendations": ["Rec 1", "Rec 2"]
 }"""
 
 def create_threat_modeling_agent(framework: str = None):
@@ -84,7 +65,7 @@ class ThreatModelingAgent:
 
         response = self.client.messages.create(
             model="claude-opus-5",
-            max_tokens=2000,
+            max_tokens=4000,
             system=system_prompt,
             messages=self.conversation_history
         )

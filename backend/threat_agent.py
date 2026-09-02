@@ -89,7 +89,18 @@ class ThreatModelingAgent:
             messages=self.conversation_history
         )
 
-        assistant_message = response.content[0].text
+        # Extract text from response, handling thinking blocks
+        assistant_message = ""
+        for block in response.content:
+            if hasattr(block, 'text'):
+                assistant_message += block.text
+            elif hasattr(block, 'thinking'):
+                # Skip thinking blocks, only include the final text response
+                continue
+
+        if not assistant_message:
+            assistant_message = "I'm processing your request. Please continue."
+
         self.conversation_history.append({
             "role": "assistant",
             "content": assistant_message

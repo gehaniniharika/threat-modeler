@@ -19,26 +19,17 @@ def get_report_system_prompt(framework: str) -> str:
 
     return framework_prompt + """
 
-Output JSON threat report:
+CRITICAL: Output ONLY valid JSON. Start with { and end with }. Include:
 {
-  "application_name": "name",
-  "framework": "STRIDE|PASTA|PHANTOM-B|HYBRID",
-  "summary": "Brief summary",
-  "threats": [
-    {
-      "id": "T001",
-      "title": "Title",
-      "description": "Description",
-      "category": "Category",
-      "severity": "Critical|High|Medium|Low",
-      "affected_component": "Component",
-      "attack_vector": "How",
-      "potential_impact": "Impact",
-      "mitigation": "Fix"
-    }
-  ],
-  "recommendations": ["Rec 1", "Rec 2"]
-}"""
+  "application_name": "application name",
+  "framework": "STRIDE or PASTA or PHANTOM-B",
+  "summary": "Brief threat summary",
+  "threats": [{"id": "T001", "title": "threat", "description": "desc", "category": "cat", "severity": "High", "affected_component": "comp", "attack_vector": "attack", "potential_impact": "impact", "mitigation": "fix"}],
+  "data_flows": [{"source": "A", "destination": "B", "data_type": "type", "protocol": "proto", "risks": ["risk"]}],
+  "recommendations": ["rec1", "rec2"]
+}
+
+DO NOT add any text before or after JSON."""
 
 def create_threat_modeling_agent(framework: str = None):
     """Create and return a threat modeling agent."""
@@ -99,10 +90,27 @@ class ThreatModelingAgent:
             # Try to find JSON in the response
             start = content.find('{')
             end = content.rfind('}') + 1
-            if start != -1 and end > start:
-                json_str = content[start:end]
-                return json.loads(json_str)
-        except json.JSONDecodeError:
-            pass
 
-        return None
+            if start == -1 or end <= start:
+                return None
+
+            json_str = content[start:end].strip()
+            report = json.loads(json_str)
+
+            # Validate structure
+            if not isinstance(report, dict):
+                return None
+
+            # Ensure required fields exist
+            if "threats" not in report:
+                report["threats"] = []
+            if "recommendations" not in report:
+                report["recommendations"] = []
+            if "summary" not in report:
+                report["summary"] = "Threat analysis"
+
+            return report
+
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"Failed to parse threat report: {e}")
+            return None

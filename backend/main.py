@@ -12,6 +12,7 @@ from database import get_db, init_db
 from models import Session as DBSession, Message as DBMessage, ThreatModel
 from threat_agent import create_threat_modeling_agent
 from pdf_generator import generate_threat_report_pdf
+from file_processor import process_uploaded_file, validate_file
 
 app = FastAPI(title="ThreatModeler", description="AI-powered threat modeling platform")
 
@@ -129,6 +130,64 @@ async def chat(session_id: int, msg: ChatMessage, db: Session = Depends(get_db))
     db.commit()
 
     return {"response": response}
+
+# Upload file endpoint
+@app.post("/api/sessions/{session_id}/upload-file")
+async def upload_file(session_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    session = db.query(DBSession).filter(DBSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    try:
+        # Read file content
+        file_content = await file.read()
+
+        # Validate file
+        validate_file(file.filename, len(file_content))
+
+        # Extract text from file
+        extracted_text = await process_uploaded_file(file.filename, file_content)
+
+        if not extracted_text:
+            raise HTTPException(status_code=400, detail="No text could be extracted from the file")
+
+        # Send extracted text as a message
+        user_message = f"I've uploaded a document ({file.filename}). Here's the content:\n\n{extracted_text}"
+
+        # Create agent with current framework
+        agent = create_threat_modeling_agent(framework=session.framework)
+
+        # Load conversation history
+        messages = db.query(DBMessage).filter(DBMessage.session_id == session_id).all()
+        for message in messages:
+            agent.conversation_history.append({"role": message.role, "content": message.content})
+
+        # Save user message about the file
+        user_msg = DBMessage(
+            session_id=session_id,
+            role="user",
+            content=f"Uploaded document: {file.filename}"
+        )
+        db.add(user_msg)
+
+        # Get AI response
+        response = agent.chat(user_message)
+
+        # Save assistant response
+        assistant_msg = DBMessage(session_id=session_id, role="assistant", content=response)
+        db.add(assistant_msg)
+        db.commit()
+
+        return {
+            "filename": file.filename,
+            "extracted_text_length": len(extracted_text),
+            "response": response
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 # Generate report
 @app.post("/api/sessions/{session_id}/generate-report")

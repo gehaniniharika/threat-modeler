@@ -27,7 +27,9 @@ export default function ChatInterface({ sessionId }: Props) {
   const [loading, setLoading] = useState(false)
   const [reportReady, setReportReady] = useState(false)
   const [showFrameworkSelector, setShowFrameworkSelector] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const GREETING_MESSAGE = {
     id: 0,
@@ -163,6 +165,46 @@ export default function ChatInterface({ sessionId }: Props) {
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingFile(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`/api/sessions/${sessionId}/upload-file`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || 'Failed to upload file')
+      }
+
+      // Reload messages to get the latest
+      const messagesResponse = await fetch(`/api/sessions/${sessionId}/messages`)
+      const newMessages = await messagesResponse.json()
+      setMessages(newMessages)
+
+      // Show framework selector if needed
+      if (newMessages.length >= 4 && !selectedFramework && !showFrameworkSelector) {
+        setShowFrameworkSelector(true)
+      }
+    } catch (err) {
+      console.error('Failed to upload file:', err)
+      alert(`Error: ${err instanceof Error ? err.message : 'Failed to upload file'}`)
+    } finally {
+      setUploadingFile(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   return (
     <div className="chat-interface">
       <div className="chat-header">
@@ -228,10 +270,31 @@ export default function ChatInterface({ sessionId }: Props) {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={selectedFramework ? "Ask follow-up questions or provide more details..." : "Describe your application architecture..."}
-          disabled={loading || showFrameworkSelector}
+          disabled={loading || showFrameworkSelector || uploadingFile}
           className="chat-input"
         />
-        <button type="submit" disabled={loading || showFrameworkSelector} className="send-button">
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept=".pdf,.docx,.doc"
+          disabled={loading || uploadingFile}
+          className="file-input"
+          style={{ display: 'none' }}
+        />
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading || uploadingFile || showFrameworkSelector}
+          className="file-button"
+          title="Upload PDF or Word document"
+        >
+          {uploadingFile ? '⏳' : '📎'}
+        </button>
+
+        <button type="submit" disabled={loading || showFrameworkSelector || uploadingFile} className="send-button">
           {loading ? '...' : 'Send'}
         </button>
       </form>

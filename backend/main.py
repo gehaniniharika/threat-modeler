@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
 import json
+import io
 from datetime import datetime
 from sqlalchemy.orm import Session
 
@@ -244,10 +245,10 @@ async def download_pdf(session_id: int, db: Session = Depends(get_db)):
     threat_data = json.loads(threat_model.report_content)
     pdf_bytes = generate_threat_report_pdf(threat_data)
 
-    return FileResponse(
+    return StreamingResponse(
         iter([pdf_bytes]),
         media_type="application/pdf",
-        filename=f"threat_report_{session_id}.pdf"
+        headers={"Content-Disposition": f"attachment; filename=threat_report_{session_id}.pdf"}
     )
 
 if __name__ == "__main__":

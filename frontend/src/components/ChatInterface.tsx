@@ -28,8 +28,17 @@ export default function ChatInterface({ sessionId }: Props) {
   const [reportReady, setReportReady] = useState(false)
   const [showFrameworkSelector, setShowFrameworkSelector] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const exportFormats = [
+    { label: "📄 PDF", format: "pdf", mime: "application/pdf" },
+    { label: "📋 JSON", format: "json", mime: "application/json" },
+    { label: "🌐 HTML", format: "html", mime: "text/html" },
+    { label: "📝 Markdown", format: "markdown", mime: "text/markdown" },
+    { label: "📊 CSV", format: "csv", mime: "text/csv" }
+  ]
 
   const GREETING_MESSAGE = {
     id: 0,
@@ -150,18 +159,39 @@ export default function ChatInterface({ sessionId }: Props) {
     }
   }
 
-  const handleDownloadPDF = async () => {
+  const handleExport = async (format: string) => {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/download-pdf`)
+      const endpoint = format === 'pdf' ? 'download-pdf' : `download-${format}`
+      const response = await fetch(`/api/sessions/${sessionId}/${endpoint}`)
+
+      if (!response.ok) throw new Error('Export failed')
+
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `threat_report_${sessionId}.pdf`
+
+      const ext = format === 'markdown' ? 'md' : format
+      a.download = `threat_report_${sessionId}.${ext}`
       a.click()
       window.URL.revokeObjectURL(url)
+      setShowExportMenu(false)
     } catch (err) {
-      console.error('Failed to download PDF:', err)
+      console.error(`Failed to export as ${format}:`, err)
+      alert(`Error exporting as ${format}`)
+    }
+  }
+
+  const handleCopyToClipboard = async () => {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/report?format=json`)
+      const data = await response.json()
+      await navigator.clipboard.writeText(data.content)
+      alert('Report copied to clipboard!')
+      setShowExportMenu(false)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      alert('Error copying to clipboard')
     }
   }
 
@@ -216,9 +246,34 @@ export default function ChatInterface({ sessionId }: Props) {
         </div>
         <div className="chat-actions">
           {reportReady && (
-            <button className="download-btn" onClick={handleDownloadPDF}>
-              📄 Download PDF Report
-            </button>
+            <div className="export-menu-container">
+              <button
+                className="export-btn"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+              >
+                📥 Export Report ▼
+              </button>
+              {showExportMenu && (
+                <div className="export-dropdown">
+                  {exportFormats.map(fmt => (
+                    <button
+                      key={fmt.format}
+                      className="export-option"
+                      onClick={() => handleExport(fmt.format)}
+                    >
+                      {fmt.label}
+                    </button>
+                  ))}
+                  <div className="export-divider"></div>
+                  <button
+                    className="export-option"
+                    onClick={handleCopyToClipboard}
+                  >
+                    📋 Copy JSON
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           {selectedFramework && !reportReady && messages.length > 4 && (
             <button className="generate-btn" onClick={handleGenerateReport} disabled={loading}>

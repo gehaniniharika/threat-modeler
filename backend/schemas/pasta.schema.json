@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PASTA Threat Analysis",
+  "type": "object",
+  "required": ["application_name", "framework", "verdict", "threats", "summary"],
+  "properties": {
+    "application_name": {
+      "type": "string",
+      "description": "Name of the analyzed application"
+    },
+    "framework": {
+      "type": "string",
+      "enum": ["PASTA"],
+      "description": "Threat modeling framework used"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["TRUE_POSITIVE", "FALSE_POSITIVE", "UNCLEAR"],
+      "description": "Overall security verdict"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Confidence level of verdict (0-100)"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Executive summary of findings"
+    },
+    "threats": {
+      "type": "array",
+      "description": "List of identified threats",
+      "items": {
+        "type": "object",
+        "required": ["id", "stage", "title", "severity"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^P[0-9]{3}$",
+            "description": "Threat ID (P001, P002, etc.)"
+          },
+          "stage": {
+            "type": "string",
+            "enum": ["Assets", "Threats", "Vulnerabilities", "Attack", "Impact", "Countermeasures", "Prioritization"],
+            "description": "PASTA stage"
+          },
+          "title": {
+            "type": "string",
+            "description": "Threat title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed threat description"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["Critical", "High", "Medium", "Low"],
+            "description": "Threat severity"
+          },
+          "attack_path": {
+            "type": "string",
+            "description": "Attack simulation path"
+          },
+          "business_impact": {
+            "type": "string",
+            "description": "Business impact of the threat"
+          },
+          "likelihood": {
+            "type": "string",
+            "enum": ["Very High", "High", "Medium", "Low", "Very Low"],
+            "description": "Likelihood of exploitation"
+          },
+          "countermeasures": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Recommended countermeasures"
+          }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "Prioritized recommendations",
+      "items": {"type": "string"}
+    }
+  }
+}

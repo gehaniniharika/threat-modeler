@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "STRIDE Threat Analysis",
+  "type": "object",
+  "required": ["application_name", "framework", "verdict", "threats", "summary"],
+  "properties": {
+    "application_name": {
+      "type": "string",
+      "description": "Name of the analyzed application"
+    },
+    "framework": {
+      "type": "string",
+      "enum": ["STRIDE"],
+      "description": "Threat modeling framework used"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["TRUE_POSITIVE", "FALSE_POSITIVE", "UNCLEAR"],
+      "description": "Overall security verdict"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Confidence level of verdict (0-100)"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Executive summary of findings"
+    },
+    "threats": {
+      "type": "array",
+      "description": "List of identified threats",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "title", "severity"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^S[0-9]{3}$",
+            "description": "Threat ID (S001, S002, etc.)"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["Spoofing", "Tampering", "Repudiation", "Information Disclosure", "Denial of Service", "Elevation of Privilege"],
+            "description": "STRIDE category"
+          },
+          "title": {
+            "type": "string",
+            "description": "Threat title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed threat description"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["Critical", "High", "Medium", "Low"],
+            "description": "Threat severity"
+          },
+          "affected_component": {
+            "type": "string",
+            "description": "Component affected by threat"
+          },
+          "attack_vector": {
+            "type": "string",
+            "description": "How the threat could be exploited"
+          },
+          "potential_impact": {
+            "type": "string",
+            "description": "Consequences of successful exploit"
+          },
+          "mitigation": {
+            "type": "string",
+            "description": "Recommended mitigation strategy"
+          }
+        }
+      }
+    },
+    "data_flows": {
+      "type": "array",
+      "description": "Data flow analysis",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {"type": "string"},
+          "destination": {"type": "string"},
+          "data_type": {"type": "string"},
+          "protocol": {"type": "string"},
+          "risks": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "High-priority recommendations",
+      "items": {"type": "string"}
+    }
+  }
+}

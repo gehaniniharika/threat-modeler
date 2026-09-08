@@ -14,6 +14,8 @@ from models import Session as DBSession, Message as DBMessage, ThreatModel
 from threat_agent import create_threat_modeling_agent
 from pdf_generator import generate_threat_report_pdf
 from file_processor import process_uploaded_file, validate_file
+from schema_validator import validate_threat_report
+from render import render_json, render_html, render_markdown, render_csv
 
 app = FastAPI(title="ThreatModeler", description="AI-powered threat modeling platform")
 
@@ -250,6 +252,94 @@ async def download_pdf(session_id: int, db: Session = Depends(get_db)):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=threat_report_{session_id}.pdf"}
     )
+
+# Download report as JSON
+@app.get("/api/sessions/{session_id}/download-json")
+async def download_json(session_id: int, db: Session = Depends(get_db)):
+    threat_model = db.query(ThreatModel).filter(ThreatModel.session_id == session_id).first()
+    if not threat_model or not threat_model.report_content:
+        raise HTTPException(status_code=404, detail="No report found")
+
+    threat_data = json.loads(threat_model.report_content)
+    json_content = render_json(threat_data)
+
+    return StreamingResponse(
+        iter([json_content.encode()]),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename=threat_report_{session_id}.json"}
+    )
+
+# Download report as HTML
+@app.get("/api/sessions/{session_id}/download-html")
+async def download_html(session_id: int, db: Session = Depends(get_db)):
+    threat_model = db.query(ThreatModel).filter(ThreatModel.session_id == session_id).first()
+    if not threat_model or not threat_model.report_content:
+        raise HTTPException(status_code=404, detail="No report found")
+
+    threat_data = json.loads(threat_model.report_content)
+    html_content = render_html(threat_data)
+
+    return StreamingResponse(
+        iter([html_content.encode()]),
+        media_type="text/html",
+        headers={"Content-Disposition": f"attachment; filename=threat_report_{session_id}.html"}
+    )
+
+# Download report as Markdown
+@app.get("/api/sessions/{session_id}/download-markdown")
+async def download_markdown(session_id: int, db: Session = Depends(get_db)):
+    threat_model = db.query(ThreatModel).filter(ThreatModel.session_id == session_id).first()
+    if not threat_model or not threat_model.report_content:
+        raise HTTPException(status_code=404, detail="No report found")
+
+    threat_data = json.loads(threat_model.report_content)
+    md_content = render_markdown(threat_data)
+
+    return StreamingResponse(
+        iter([md_content.encode()]),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename=threat_report_{session_id}.md"}
+    )
+
+# Download report as CSV
+@app.get("/api/sessions/{session_id}/download-csv")
+async def download_csv(session_id: int, db: Session = Depends(get_db)):
+    threat_model = db.query(ThreatModel).filter(ThreatModel.session_id == session_id).first()
+    if not threat_model or not threat_model.report_content:
+        raise HTTPException(status_code=404, detail="No report found")
+
+    threat_data = json.loads(threat_model.report_content)
+    csv_content = render_csv(threat_data)
+
+    return StreamingResponse(
+        iter([csv_content.encode()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=threat_report_{session_id}.csv"}
+    )
+
+# Get report for clipboard
+@app.get("/api/sessions/{session_id}/report")
+async def get_report(session_id: int, format: str = "json", db: Session = Depends(get_db)):
+    threat_model = db.query(ThreatModel).filter(ThreatModel.session_id == session_id).first()
+    if not threat_model or not threat_model.report_content:
+        raise HTTPException(status_code=404, detail="No report found")
+
+    threat_data = json.loads(threat_model.report_content)
+
+    format_map = {
+        "json": (render_json, "application/json"),
+        "html": (render_html, "text/html"),
+        "markdown": (render_markdown, "text/markdown"),
+        "csv": (render_csv, "text/csv"),
+    }
+
+    if format not in format_map:
+        format = "json"
+
+    render_fn, media_type = format_map[format]
+    content = render_fn(threat_data)
+
+    return {"content": content, "format": format, "media_type": media_type}
 
 if __name__ == "__main__":
     import uvicorn

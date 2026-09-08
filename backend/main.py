@@ -16,6 +16,8 @@ from pdf_generator import generate_threat_report_pdf
 from file_processor import process_uploaded_file, validate_file
 from schema_validator import validate_threat_report
 from render import render_json, render_html, render_markdown, render_csv
+from stream_handler import stream_threat_analysis
+from frameworks import get_framework_prompt
 
 app = FastAPI(title="ThreatModeler", description="AI-powered threat modeling platform")
 
@@ -133,6 +135,53 @@ async def chat(session_id: int, msg: ChatMessage, db: Session = Depends(get_db))
     db.commit()
 
     return {"response": response}
+
+# Stream chat endpoint (for live progress)
+@app.post("/api/sessions/{session_id}/chat-stream")
+async def chat_stream(session_id: int, msg: ChatMessage, db: Session = Depends(get_db)):
+    session = db.query(DBSession).filter(DBSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Load conversation history
+    messages = db.query(DBMessage).filter(DBMessage.session_id == session_id).all()
+    conversation_history = []
+    for message in messages:
+        conversation_history.append({"role": message.role, "content": message.content})
+
+    # Get system prompt
+    from threat_agent import INITIAL_SYSTEM_PROMPT, get_report_system_prompt
+    system_prompt = get_report_system_prompt(session.framework) if session.framework else INITIAL_SYSTEM_PROMPT
+
+    # Save user message first
+    user_msg = DBMessage(session_id=session_id, role="user", content=msg.content)
+    db.add(user_msg)
+    db.commit()
+
+    async def event_generator():
+        full_response = ""
+
+        try:
+            for event_str in stream_threat_analysis(msg.content, conversation_history, system_prompt, session.framework):
+                event_data = json.loads(event_str)
+
+                # Accumulate full response
+                if event_data.get("type") == "text_chunk":
+                    full_response += event_data.get("content", "")
+
+                # Send as SSE
+                yield f"data: {event_str}\n\n"
+
+            # Save complete response to database
+            if full_response:
+                assistant_msg = DBMessage(session_id=session_id, role="assistant", content=full_response)
+                db.add(assistant_msg)
+                db.commit()
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 # Upload file endpoint
 @app.post("/api/sessions/{session_id}/upload-file")

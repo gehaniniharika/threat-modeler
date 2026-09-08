@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './ChatInterface.css'
 import FrameworkSelector from './FrameworkSelector'
+import ProgressStream from './ProgressStream'
 
 interface Message {
   id: number
@@ -29,6 +30,7 @@ export default function ChatInterface({ sessionId }: Props) {
   const [showFrameworkSelector, setShowFrameworkSelector] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [progressEvents, setProgressEvents] = useState<Array<{type: string; message?: string; tool_name?: string; error?: string}>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -87,8 +89,10 @@ export default function ChatInterface({ sessionId }: Props) {
     if (!content.trim()) return
 
     setLoading(true)
+    setProgressEvents([])
+
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/chat`, {
+      const response = await fetch(`/api/sessions/${sessionId}/chat-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
@@ -96,11 +100,49 @@ export default function ChatInterface({ sessionId }: Props) {
 
       if (!response.ok) throw new Error('Failed to send message')
 
+      // Handle Server-Sent Events (SSE)
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No response stream')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      const events: Array<{type: string; message?: string; tool_name?: string; error?: string}> = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines[lines.length - 1] // Keep incomplete line
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i]
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.slice(6))
+              // Collect event for display
+              const displayEvent: any = { type: event.type }
+              if (event.message) displayEvent.message = event.message
+              if (event.tool_name) displayEvent.tool_name = event.tool_name
+              if (event.error) displayEvent.error = event.error
+              events.push(displayEvent)
+              setProgressEvents([...events])
+
+              scrollToBottom()
+            } catch (e) {
+              console.error('Failed to parse event:', e)
+            }
+          }
+        }
+      }
+
       // Reload messages to get the latest
       const messagesResponse = await fetch(`/api/sessions/${sessionId}/messages`)
       const newMessages = await messagesResponse.json()
       setMessages(newMessages)
       setInputValue('')
+      setProgressEvents([]) // Clear progress after completion
 
       // Show framework selector after 4+ exchanges
       if (newMessages.length >= 4 && !selectedFramework && !showFrameworkSelector) {
@@ -108,6 +150,7 @@ export default function ChatInterface({ sessionId }: Props) {
       }
     } catch (err) {
       console.error('Failed to send message:', err)
+      setProgressEvents([{ type: 'error', error: err instanceof Error ? err.message : 'Unknown error' }])
     } finally {
       setLoading(false)
     }
@@ -284,6 +327,8 @@ export default function ChatInterface({ sessionId }: Props) {
       </div>
 
       <div className="messages-container">
+        {progressEvents.length > 0 && <ProgressStream events={progressEvents} />}
+
         {messages.length === 0 && (
           <div className={`message ${GREETING_MESSAGE.role}`}>
             <div className="message-content">

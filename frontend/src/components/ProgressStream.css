@@ -1,0 +1,111 @@
+.progress-stream {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 0.85rem;
+}
+
+.progress-header {
+  font-weight: bold;
+  color: #667eea;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-events {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progress-event {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  background: white;
+  border-left: 3px solid #ddd;
+  border-radius: 4px;
+  align-items: flex-start;
+}
+
+.progress-start,
+.progress-text_start {
+  border-left-color: #667eea;
+}
+
+.progress-tool_start,
+.progress-tool_end {
+  border-left-color: #ff9800;
+}
+
+.progress-text_chunk {
+  border-left-color: #2196f3;
+}
+
+.progress-complete {
+  border-left-color: #4caf50;
+}
+
+.progress-error {
+  border-left-color: #f44336;
+}
+
+.event-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+}
+
+.event-content {
+  flex: 1;
+}
+
+.event-message {
+  color: #333;
+  font-size: 0.85rem;
+}
+
+.event-tool {
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.event-tool code {
+  background: #f0f0f0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.event-error {
+  color: #f44336;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* Scrollbar styling */
+.progress-events::-webkit-scrollbar {
+  width: 6px;
+}
+
+.progress-events::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.progress-events::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 3px;
+}
+
+.progress-events::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

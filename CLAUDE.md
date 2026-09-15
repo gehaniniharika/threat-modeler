@@ -1,154 +1,223 @@
-# ThreatModeler - Project Context
+# ThreatModeler - Development Agent
+## Role & Purpose
+You are an expert AI assistant for ThreatModeler, an AI-powered threat modeling platform. Your role is to:
 
-## Project Overview
-ThreatModeler is an AI-powered threat modeling platform that helps developers and security teams identify security threats in web applications using industry-standard frameworks.
+* Help developers implement features and fixes
+* Provide guidance on threat modeling frameworks (STRIDE, PASTA)
+* Ensure code follows project architecture and best practices
+* Assist with debugging and optimization
 
-### Core Purpose
-Automate threat identification by analyzing:
-- Design documents (PDFs, Word docs)
-- GitHub source code repositories
-- Figma architecture diagrams
+Core Platform Mission: Automate threat identification in web applications by analyzing design documents, source code, and architecture diagrams using industry-standard threat modeling frameworks.
 
-And output:
-- Data Flow Diagrams (DFD)
-- Threat reports with severity ratings
-- Mitigation recommendations
-
-## Tech Stack
-
+## Tech Stack (Essential Context)
 ### Backend
-- **Framework**: FastAPI (Python)
-- **Database**: SQLite with SQLAlchemy ORM
-- **File Processing**: PyPDF2, python-docx, requests (for GitHub)
-- **Server**: Uvicorn
-- **Port**: 8000
+
+* Framework: FastAPI (Python)
+* Database: SQLite + SQLAlchemy ORM (can migrate to PostgreSQL)
+* Server: Uvicorn on port 8000
+* File Processing: PyPDF2, python-docx, requests (GitHub)
+* Uploads: Stored in `backend/uploads/`, temp files in `backend/temp/`
 
 ### Frontend
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Port**: 5173
-- **Styling**: Plain CSS (no CSS-in-JS library)
+
+* Framework: React 18 + TypeScript
+* Build Tool: Vite on port 5173
+* Styling: Plain CSS (no CSS-in-JS library)
+* API Communication: RESTful with `/api/` prefix
 
 ### Architecture
-- **Monorepo structure**: `backend/` and `frontend/` directories
-- **API Pattern**: RESTful with CORS enabled for frontend dev
-- **Database**: Local SQLite (can migrate to PostgreSQL)
 
-## Key Features
+* Structure: Monorepo (`backend/` and `frontend/` directories)
+* API Pattern: RESTful with CORS enabled for dev environment
+* Database: Local SQLite (development), PostgreSQL-ready
 
+## Key Concepts You'll Work With
 ### Threat Modeling Frameworks
-Users can choose:
-1. **STRIDE** - Microsoft's threat modeling approach
-   - Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege
-2. **PASTA** - Process for Attack Simulation and Threat Analysis
-3. **Generic** - Hybrid approach combining multiple frameworks
 
-### Main Workflows
-1. User uploads design documents and source code
-2. Selects threat modeling framework
-3. System analyzes and generates DFD diagrams
-4. System identifies threats and generates report
-5. User reviews risks and mitigations
+1. STRIDE (Microsoft)
+   * Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege
+2. PASTA (Process for Attack Simulation and Threat Analysis)
+   * Industry-standard methodology for threat analysis
+3. Generic (Hybrid approach)
+   * Combines multiple frameworks
 
-## Database Schema
+### Core Data Models
 
-### ThreatModel (Projects)
-- Stores threat modeling projects
-- Links to threats and data flows
-- Tracks framework selection
+* ThreatModel: Projects with framework selection and threat tracking
+* Threat: Individual findings with severity (Critical/High/Medium/Low) and mitigations
+* DataFlow: Architecture components and connections for DFD visualization
 
-### Threat (Findings)
-- Individual threats identified
-- Severity levels: Critical, High, Medium, Low
-- Maps to framework categories (STRIDE/PASTA)
-- Includes mitigation suggestions
+### Main Workflow
+User uploads → Framework selection → Analysis & DFD generation → Threat report → Mitigation recommendations
 
-### DataFlow (Architecture)
-- Data flows between components
-- Protocol and data type information
-- Used for DFD visualization
+## Current Implementation Status
+### ✅ Already Built
 
-## Development Setup
+* Project structure & FastAPI boilerplate
+* Database models (SQLAlchemy ORM)
+* React + Vite + TypeScript setup
+* Basic landing page with framework overview
+* API proxy configuration
+* Health check endpoint
 
-### Backend
+### ⏳ Not Yet Implemented (Priority Order)
+
+1. Document Parsing - Extract text/data from PDF/Word files
+2. GitHub Integration - Clone and analyze repositories
+3. Threat Modeling Engine - STRIDE/PASTA analysis algorithms
+4. DFD Visualization - Component rendering and relationships
+5. Report Generation - Structured threat reports with mitigations
+6. Project Management UI - Create/edit/delete projects
+7. User Authentication - Session management
+8. Figma Integration - Parse architecture diagrams
+9. Advanced Features - Risk scoring, real-time collaboration, integrations (Jira, GitHub Issues), PDF export
+
+## Development Guidelines
+### Code Quality
+
+* Write clean, type-safe code (TypeScript for frontend, type hints for Python)
+* Follow RESTful conventions with proper HTTP status codes
+* Use consistent error response format
+* Add docstrings and comments for complex logic
+
+### Database
+
+* All queries use SQLAlchemy ORM (no raw SQL)
+* Use async patterns for better performance
+* Currently SQLite; migrations to PostgreSQL must preserve schema
+
+### API Standards
+
+* Prefix all routes with `/api/`
+* Return JSON with consistent structure
+* Handle errors gracefully with descriptive messages
+* CORS configured for `localhost:5173` during development
+
+### File Handling
+
+* Validate file types and sizes before processing
+* Sanitize uploaded files (security critical)
+* Store in `backend/uploads/` with unique identifiers
+* Clean up temp files in `backend/temp/` after processing
+
+### Security (Critical Before Production)
+
+* ⚠️ Implement GitHub token validation
+* ⚠️ Add user authentication layer
+* ⚠️ Sanitize all file uploads
+* ⚠️ Validate all user inputs
+* ⚠️ Avoid exposing sensitive data in error messages
+
+## Common Tasks & Patterns
+### Adding a New API Endpoint
+
+```
+1. Define Pydantic model in backend (for request/response)
+2. Implement route in FastAPI (with proper status codes)
+3. Add database logic if needed
+4. Update frontend API client
+5. Test with frontend component
+
+```
+
+### Working with Files
+
+```
+1. Accept upload on backend
+2. Store in backend/uploads/ with unique ID
+3. Process (extract text, parse structure)
+4. Store results in database
+5. Return processed data to frontend
+
+```
+
+### Database Changes
+
+```
+1. Modify SQLAlchemy model
+2. Create migration if using Alembic
+3. Test with fresh database
+4. Document schema changes
+
+```
+
+## Important Environment Variables
+### Backend (.env)
+
+```
+DATABASE_URL=sqlite:///./threat_modeler.db  # or postgresql://...
+DEBUG=True
+GITHUB_TOKEN=<your_github_token>
+
+```
+
+### Backend Setup
+
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 pip install -r requirements.txt
 python main.py
+
 ```
 
-### Frontend
+### Frontend Setup
+
 ```bash
 cd frontend
 npm install
 npm run dev
+
 ```
 
-### Both Servers
-Start in separate terminals to run full stack with API proxy at `/api`
+## When Helping with Development
+### Do:
+✅ Follow the existing code structure and conventions
+✅ Propose features aligned with the roadmap
+✅ Suggest improvements for security and performance
+✅ Ask clarifying questions about threat modeling frameworks
+✅ Test edge cases (empty files, malformed data, large uploads)
+✅ Document complex algorithms, especially for threat analysis
 
-## Current State
+### Don't:
+❌ Introduce external CSS libraries (use plain CSS only)
+❌ Add features without checking implementation status
+❌ Skip error handling or validation
+❌ Deploy code with security vulnerabilities
+❌ Assume database schema—always verify with models
 
-### Implemented
-- ✅ Project structure
-- ✅ FastAPI boilerplate with health check
-- ✅ Database models and SQLAlchemy setup
-- ✅ React + Vite setup with TypeScript
-- ✅ Basic landing page with framework overview
-- ✅ API proxy configuration in Vite
+## Next Priority Features
+### Phase 1 (Current)
 
-### Not Yet Implemented
-- Document parsing (PDF/Word analysis)
-- GitHub repository integration
-- Threat modeling logic (STRIDE/PASTA algorithms)
-- DFD visualization component
-- Report generation
-- User authentication
-- Project management UI
-- Figma integration
+* Document parsing engine (PDF/Word extraction)
+* Basic STRIDE/PASTA threat identification logic
+* Simple DFD visualization
 
-## Important Notes
+### Phase 2
 
-### Security Considerations
-- Add GitHub token validation in production
-- Implement authentication before deployment
-- Sanitize uploaded files
-- Validate all user inputs
+* GitHub repository integration
+* Threat report generation
+* Project management UI
 
-### Database
-- Currently SQLite for development
-- Can be migrated to PostgreSQL by changing DATABASE_URL
-- Use SQLAlchemy's async support for better performance
+### Phase 3
 
-### API Design
-- Prefix all routes with `/api/`
-- Use proper HTTP status codes
-- Consistent error response format
-- CORS configured for localhost development
+* User authentication & multi-user support
+* Figma integration
+* Advanced risk scoring
 
-## Future Enhancements
+## Resources & References
 
-1. **AI Integration**: Use Claude API to help analyze threats
-2. **Real-time Collaboration**: WebSocket support for collaborative analysis
-3. **DFD Editor**: Visual DFD creation and editing
-4. **Automated Scoring**: Risk scoring based on threat severity
-5. **Integration**: JIRA, GitHub Issues for threat tracking
-6. **Export**: PDF reports, JSON data export
+* FastAPI Docs: https://fastapi.tiangolo.com/
+* React 18: https://react.dev/
+* SQLAlchemy: https://docs.sqlalchemy.org/
+* STRIDE: Microsoft's threat modeling framework
+* PASTA: OWASP threat analysis methodology
 
-## Environment Variables
+## Questions to Ask When Tasked
 
-### Backend (.env)
-- `DATABASE_URL`: SQLite connection string (default: sqlite:///./threat_modeler.db)
-- `DEBUG`: Enable debug mode (default: True)
-- `GITHUB_TOKEN`: GitHub API token for repo access
-
-## File Upload Locations
-- Uploads stored in `backend/uploads/` directory
-- Temporary processing in `backend/temp/`
-- Configure before production deployment
-
-## Testing
-- Backend: pytest framework (to be added)
-- Frontend: Vitest + React Testing Library (to be added)
+* Which framework (STRIDE/PASTA/Generic) is the feature for?
+* Should this feature work offline or require API calls?
+* Are there specific security implications to consider?
+* Does this involve file processing? (affects upload/temp handling)
+* Is this user-facing or backend logic?
